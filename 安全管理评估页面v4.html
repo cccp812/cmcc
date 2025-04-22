@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>中国移动 - 安全管理域评估 (最终版)</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; line-height: 1.6; margin: 20px; background-color: #f4f7fa; color: #333; }
+        h1 { color: #005BAC; text-align: center; margin-bottom: 30px; }
+        .assessment-section { border: 1px solid #dce1e6; padding: 20px; margin-bottom: 20px; border-radius: 8px; background-color: #ffffff; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        .indicator-l2 { font-size: 1.3em; font-weight: 600; color: #005BAC; margin-bottom: 20px; border-bottom: 2px solid #005BAC; padding-bottom: 8px; }
+        .indicator-l3 { margin-bottom: 20px; }
+        .indicator-l3 h5 { margin-bottom: 10px; color: #1a2b47; font-weight: 600; }
+        .score-option label { display: block; margin-bottom: 8px; padding: 10px 15px; border-radius: 6px; cursor: pointer; background-color: #f8f9fa; border: 1px solid #dee2e6; transition: background-color 0.2s ease, border-color 0.2s ease; }
+        .score-option input[type="radio"] { margin-right: 12px; vertical-align: middle; }
+        .score-option label:hover { background-color: #e9ecef; border-color: #ced4da; }
+        .score-option input[type="radio"]:checked + span { font-weight: bold; }
+
+        button { padding: 12px 25px; font-size: 1.1em; font-weight: 600; color: #fff; border: none; border-radius: 5px; cursor: pointer; margin-top: 15px; margin-right: 10px; transition: background-color 0.2s ease; }
+        button:hover { opacity: 0.9; }
+        #calculateBtn { background-color: #005BAC; }
+        #calculateBtn:hover { background-color: #004a8c; }
+        #generateTextReportBtn { background-color: #f0ad4e; }
+        #generateTextReportBtn:hover { background-color: #ec971f; }
+        #generateWordReportBtn { background-color: #5bc0de; }
+        #generateWordReportBtn:hover { background-color: #31b0d5; }
+        #generateExcelBtn { background-color: #28a745; }
+        #generateExcelBtn:hover { background-color: #218838; }
+        #aiReportBtn { background-color: #6f42c1; } /* 紫色 */
+        #aiReportBtn:hover { background-color: #5a379a; }
+
+        #results { margin-top: 30px; border: 1px solid #dce1e6; padding: 25px; border-radius: 8px; background-color: #eaf2fa; box-shadow: 0 2px 4px rgba(0,0,0,0.05); }
+        #results h2 { color: #005BAC; text-align: center; margin-bottom: 20px; }
+        #scores h4 { color: #004a8c; margin-top: 15px; margin-bottom: 15px; padding-bottom: 5px; border-bottom: 1px solid #cdd5de; }
+        #scores .l2-score-item { margin-bottom: 18px; padding-left: 15px; border-left: 4px solid #a8c7e0; background-color: rgba(255, 255, 255, 0.4); padding-top: 10px; padding-bottom: 10px; padding-right: 10px; border-radius: 0 5px 5px 0; }
+        #scores .l2-score-item h5 { font-weight: 700; color: #004a8c; margin-bottom: 10px; margin-top: 0; font-size: 1.1em; }
+        #scores .l3-score-list { list-style-type: circle; margin-left: 20px; padding-left: 5px; font-size: 0.95em; color: #333; }
+        #scores .l3-score-list li { margin-bottom: 5px; }
+        #scores .l3-score-list li::marker { color: #005BAC; font-size: 1.1em; }
+        #scores hr { border: 0; height: 1px; background-color: #cdd5de; margin: 25px 0; }
+        #scores h4:last-of-type { border-bottom: none; font-size: 1.2em; color: #005BAC; text-align: right; margin-top: 0; }
+        #calculationDetails { margin-top: 25px; padding: 15px; background-color: #f0f0f0; border: 1px solid #ccc; border-radius: 5px; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; white-space: pre-wrap; color: #444; }
+        #calculationDetails h4 { margin-top: 0; margin-bottom: 10px; color: #005BAC; }
+
+        #chartRow { display: flex; justify-content: space-around; align-items: flex-start; flex-wrap: wrap; margin-top: 25px; margin-bottom: 15px; }
+        #radarChartContainer, #barChartContainer {
+            max-width: 48%; flex: 1 1 400px; margin: 10px; padding: 15px; background-color: #fff;
+            border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); min-width: 300px; height: 400px;
+            display: flex; justify-content: center; align-items: center;
+        }
+        #radarChartContainer canvas, #barChartContainer canvas { max-height: 100%; max-width: 100%; }
+
+        #aiAnalysisSection { margin-top: 30px; padding-top: 25px; border-top: 1px solid #cdd5de; }
+        #aiAnalysisSection h3 { color: #005BAC; text-align: center; margin-bottom: 20px; }
+        #aiAnalysisContent { background-color: #fff; border: 1px solid #dce1e6; padding: 20px 25px; border-radius: 8px; line-height: 1.7; color: #333; box-shadow: 0 1px 3px rgba(0,0,0,0.04); }
+        #aiAnalysisContent h5 { color: #005BAC; margin-top: 18px; margin-bottom: 8px; font-size: 1.1em; border-bottom: 1px dotted #ccc; padding-bottom: 4px; }
+        #aiAnalysisContent h5:first-of-type { margin-top: 0; }
+        #aiAnalysisContent ul { list-style-type: disc; margin-left: 20px; padding-left: 10px; margin-bottom: 15px; }
+        #aiAnalysisContent strong { color: #004a8c; }
+        #aiAnalysisContent .low-score { color: #dc3545; font-weight: bold; }
+        #aiAnalysisContent .medium-score { color: #ffc107; font-weight: bold; }
+        #aiAnalysisContent .high-score { color: #28a745; font-weight: bold; }
+        #textReportContainer { margin-top: 30px; }
+        #textReportContainer h3 { color: #005BAC; text-align: center; margin-bottom: 10px; border-top: 1px solid #cdd5de; padding-top: 25px; }
+        #textReportContainer p { text-align: center; font-size: 0.9em; color: #555; margin-bottom: 15px; }
+        #textReportOutput { width: 98%; padding: 15px; font-family: 'Courier New', Courier, monospace; font-size: 0.9em; border: 1px solid #ccc; border-radius: 5px; background-color: #fdfdfd; line-height: 1.5; box-shadow: inset 0 1px 3px rgba(0,0,0,0.1); }
+        #results .notes { font-size: 0.9em; color: #555; margin-top: 30px; padding-top: 15px; border-top: 1px dashed #cdd5de; }
+        #results .notes ul { padding-left: 18px; list-style-position: outside;}
+        #results .notes li { margin-bottom: 5px;}
+        @media (max-width: 900px) {
+             #chartRow { flex-direction: column; align-items: center; }
+             #radarChartContainer, #barChartContainer {
+                  max-width: 90%; flex-basis: auto; margin: 15px 0; height: 350px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <h1>安全管理域评估 (最终版)</h1>
+    <p style="text-align: center; margin-bottom: 30px;">请根据实际情况，为每个三级指标选择最符合的描述。</p>
+
+    <form id="assessmentForm">
+        <div class="assessment-section">
+            <h3 class="indicator-l2">一、制度管理 (权重: 20%)</h3>
+            <div class="indicator-l3">
+                <h5>管理机制 (权重: 30%)</h5>
+                <div class="score-option">
+                    <label><input type="radio" name="sm_policy_mech" value="1" required> <span>[1分] 应建立基础的安全管理制度（如网络安全管理办法），明确核心安全管理要求。</span></label>
+                    <label><input type="radio" name="sm_policy_mech" value="2"> <span>[2分] 应针对安全管理活动中的主要管理内容（安全运营、关基防护等）建立详细安全管理制度；应制定标准操作规程，规范操作流程。</span></label>
+                    <label><input type="radio" name="sm_policy_mech" value="3"> <span>[3分] 应建立涵盖网络安全工作各个环节和流程的安全制度体系，包括但不仅限于技术研发管理、应急响应预案、人员安全培训等多方面内容；建立完善的安全制度层级，并进行分类。</span></label>
+                    <label><input type="radio" name="sm_policy_mech" value="4"> <span>[4分] 应引入先进的网络安全技术与理念，构建具备兼容性、灵活性和扩展性的网络安全制度体系，确保能够适应不断变化的网络环境。</span></label>
+                    <label><input type="radio" name="sm_policy_mech" value="5"> <span>[5分] 应全面整合全球先进的网络安全技术与理念，打造一个高度智能化、自适应、可持续发展的网络安全制度体系。</span></label>
+                </div>
+            </div>
+            <div class="indicator-l3">
+                <h5>体系完善 (权重: 30%)</h5>
+                <div class="score-option">
+                    <label><input type="radio" name="sm_policy_complete" value="1" required> <span>[1分] 应明确制度更新的触发条件和更新周期。</span></label>
+                    <label><input type="radio" name="sm_policy_complete" value="2"> <span>[2分] 应周期性开展制度体系完善与更新，建立制度版本管理机制，记录制度变更历史和原因。</span></label>
+                    <label><input type="radio" name="sm_policy_complete" value="3"> <span>[3分] 应根据合规要求、业务变化和安全威胁动态更新及完善制度体系与安全管理要求。</span></label>
+                    <label><input type="radio" name="sm_policy_complete" value="4"> <span>[4分] 应建立安全制度的国际对标机制，定期与国际先进标准对比分析，不断提升制度水平和国际化程度。应加强与外部机构的交流，借鉴先进的制度管理经验，优化自身制度体系。</span></label>
+                    <label><input type="radio" name="sm_policy_complete" value="5"> <span>[5分] 应建立智能化的安全制度管理平台，智能化生成制度优化建议，实现制度管理与网络安全动态机合规要求动态联动。</span></label>
+                </div>
+            </div>
+             <div class="indicator-l3">
+                <h5>制度执行 (权重: 40%)</h5>
+                <div class="score-option">
+                    <label><input type="radio" name="sm_policy_exec" value="1" required> <span>[1分] 应明确网络安全制度执行的基本范围。应指定人员负责监督制度执行的初步情况，对明显的违规行为进行记录。</span></label>
+                    <label><input type="radio" name="sm_policy_exec" value="2"> <span>[2分] 应建立日常的制度执行检查机制，定期（如每月）检查核心安全制度的执行情况；对不同业务部门的制度执行情况进行分类记录，形成执行报告。</span></label>
+                    <label><input type="radio" name="sm_policy_exec" value="3"> <span>[3分] 应制定全面的制度执行管理方法，应定期（如每半年）对安全制度和操作规程的执行情况进行检查，形成详细检查报告。通过一定的自动化监控与审计工具，实时监测制度执行偏差并及时纠正。</span></label>
+                    <label><input type="radio" name="sm_policy_exec" value="4"> <span>[4分] 应利用技术手段（如审计系统、自动化监测工具）提高制度执行情况检查的效率和准确性，邀请外部专家对制度执行情况进行评估，确保执行质量符合行业标准和最佳实践。</span></label>
+                    <label><input type="radio" name="sm_policy_exec" value="5"> <span>[5分] 应定期评估制度执行体系的有效性，通过量化指标（如违规率下降幅度、执行效率提升比例）不断完善执行体系。</span></label>
+                </div>
+            </div>
+        </div>
+
+        <div class="assessment-section">
+             <h3 class="indicator-l2">二、审核管理 (权重: 15%)</h3>
+             <div class="indicator-l3">
+                <h5>考核机制 (权重: 40%)</h5>
+                 <div class="score-option">
+                    <label><input type="radio" name="sm_audit_assess" value="1" required> <span>[1分] 应制定基本考核标准，通过简单的对错判断来衡量员工是否符合基本要求。</span></label>
+                    <label><input type="radio" name="sm_audit_assess" value="2"> <span>[2分] 应细化考核标准，从多维度详细规定各项考核内容的评判依据。</span></label>
+                    <label><input type="radio" name="sm_audit_assess" value="3"> <span>[3分] 应构建完善的网络安全考核管理体系，综合考虑组织战略、业务流程与安全目标的融合。</span></label>
+                    <label><input type="radio" name="sm_audit_assess" value="4"> <span>[4分] 应拓展考核维度，纳入创新能力、团队协作在安全项目中的表现等新内容。</span></label>
+                    <label><input type="radio" name="sm_audit_assess" value="5"> <span>[5分] 应基于全球网络安全趋势和新技术应用制定前瞻性考核标准，运用先进技术实现自动、实时、智能考核。</span></label>
+                  </div>
+            </div>
+             <div class="indicator-l3">
+                <h5>考核结果运用 (权重: 60%)</h5>
+                 <div class="score-option">
+                    <label><input type="radio" name="sm_audit_apply" value="1" required> <span>[1分] 应将考核结果用于确定需要加强安全知识培训的员工个体，制定个性化培训计划。</span></label>
+                    <label><input type="radio" name="sm_audit_apply" value="2"> <span>[2分] 应将考核结果与员工短期绩效挂钩，直接影响月度绩效奖金的发放额度，优化培训内容的深度和广度。</span></label>
+                    <label><input type="radio" name="sm_audit_apply" value="3"> <span>[3分] 应将考核结果深度嵌入员工薪酬调整机制，作为重要的考量因素，利用考核结果评估网络安全部门整体绩效，推动部门工作改进。</span></label>
+                    <label><input type="radio" name="sm_audit_apply" value="4"> <span>[4分] 应将考核结果作为组织战略调整中网络安全部分的关键依据，指导资源投入方向，利用考核结果调整网络安全预算。</span></label>
+                    <label><input type="radio" name="sm_audit_apply" value="5"> <span>[5分] 应将考核结果作为评估组织核心竞争力的重要维度，影响市场竞争策略，依据考核结果推动组织在国际国内网络安全标准制定中的积极作用。</span></label>
+              </div>
+            </div>
+        </div>
+
+        <div class="assessment-section">
+             <h3 class="indicator-l2">三、供应链安全 (权重: 25%)</h3>
+            <div class="indicator-l3">
+                <h5>安全评估 (权重: 40%)</h5>
+                <div class="score-option">
+                    <label><input type="radio" name="sm_supply_assess" value="1" required> <span>[1分] 应构建基础的供应链网络安全审查工作机制框架，初步设定审查目标与范围。</span></label>
+                    <label><input type="radio" name="sm_supply_assess" value="2"> <span>[2分] 应制定供应链安全审查流程，明确参与部门及基本职责分工。</span></label>
+                    <label><input type="radio" name="sm_supply_assess" value="3"> <span>[3分] 应制定详细规范，明确对供应链上下游各类数据、系统、人员权限审查的具体标准。</span></label>
+                    <label><input type="radio" name="sm_supply_assess" value="4"> <span>[4分] 应建立动态监测与反馈流程，在日常运营中持续跟踪供应链网络安全状态。</span></label>
+                    <label><input type="radio" name="sm_supply_assess" value="5"> <span>[5分] 应搭建智能化的供应链安全审查管理平台，实现对供应链全流程的实时动态监控、风险智能预警以及审查结果的可视化呈现。</span></label>
+                </div>
+            </div>
+             <div class="indicator-l3">
+                <h5>风险管控机制 (权重: 60%)</h5>
+                  <div class="score-option">
+                    <label><input type="radio" name="sm_supply_riskctrl" value="1" required> <span>[1分] 应建立基础的供应链风险应对流程和规范。</span></label>
+                    <label><input type="radio" name="sm_supply_riskctrl" value="2"> <span>[2分] 应建立供应链安全应对策略，建立供应链风险清单。</span></label>
+                    <label><input type="radio" name="sm_supply_riskctrl" value="3"> <span>[3分] 应建立供应商安全风险应对机制，定期评估供应商网络安全措施落实情况。</span></label>
+                    <label><input type="radio" name="sm_supply_riskctrl" value="4"> <span>[4分] 应构建多层面供应链风险应对体系，与供应商协同开展安全技术研发与流程优化。</span></label>
+                    <label><input type="radio" name="sm_supply_riskctrl" value="5"> <span>[5分] 应建立产业链供应链安全风险应对机制，利用区块链等新兴技术实现供应链风险信息全链条追溯与可信共享。</span></label>
+                 </div>
+            </div>
+        </div>
+
+        <div class="assessment-section">
+             <h3 class="indicator-l2">四、安全人才 (权重: 25%)</h3>
+             <div class="indicator-l3">
+                 <h5>招聘与选拔 (权重: 20%)</h5>
+                 <div class="score-option">
+                     <label><input type="radio" name="sm_talent_recruit" value="1" required> <span>[1分] 应依据基础网络安全岗位需求，从本地人才市场招聘具有网络基础知识和基本安全技能的人员，通过简单面试与基础技术测试筛选，初步满足部门人员配置。</span></label>
+                     <label><input type="radio" name="sm_talent_recruit" value="2"> <span>[2分] 应拓宽招聘渠道，从区域内高校相关专业招聘优秀毕业生，设立多轮面试与实操考核环节，选拔出能胜任特定安全岗位工作的人员，充实专业人才队伍。</span></label>
+                     <label><input type="radio" name="sm_talent_recruit" value="3"> <span>[3分] 应构建系统的人才招聘体系，与全国多所知名高校、专业培训机构建立合作关系，通过综合能力评估中心进行全面考核，招聘到能推动公司网络安全战略实施的核心人才。</span></label>
+                     <label><input type="radio" name="sm_talent_recruit" value="4"> <span>[4分] 应打造全行业人才招聘平台，在全行业范围内招募网络安全顶尖人才，设立全行业招聘站点，引入具有全行业视野与跨业务交流能力的高端人才。</span></label>
+                     <label><input type="radio" name="sm_talent_recruit" value="5"> <span>[5分] 应与全球顶尖科研机构、行业协会合作开展联合人才培养与选拔项目，制定行业前瞻性人才标准，通过全球创新竞赛等方式挖掘潜在顶尖人才，构建全球网络安全人才储备库。</span></label>
+                 </div>
+             </div>
+            <div class="indicator-l3">
+                 <h5>人才认证 (权重: 15%)</h5>
+                 <div class="score-option">
+                     <label><input type="radio" name="sm_talent_cert" value="1" required> <span>[1分] 应鼓励员工考取基础网络安全认证，公司提供部分培训补贴与学习资源，内部设定认证奖励机制。</span></label>
+                     <label><input type="radio" name="sm_talent_cert" value="2"> <span>[2分] 应要求网络安全关键岗位员工获得行业认可的中级认证，建立内部认证学习小组与导师制度，定期组织认证培训与模拟考试。</span></label>
+                     <label><input type="radio" name="sm_talent_cert" value="3"> <span>[3分] 应推动核心人才获取高级网络安全认证，与专业认证机构合作定制培训课程。</span></label>
+                     <label><input type="radio" name="sm_talent_cert" value="4"> <span>[4分] 应构建全行业人才认证体系，支持员工参加全行业权威认证考试，设立全行业认证专项奖励基金，组织全行业认证经验分享会。</span></label>
+                     <label><input type="radio" name="sm_talent_cert" value="5"> <span>[5分] 应参与国际认证标准制定与修订工作，公司内部设立全球领先的人才认证实验室与研究中心，培养一批具有国际认证考官资格的内部专家。</span></label>
+                  </div>
+            </div>
+            <div class="indicator-l3">
+                 <h5>专业培训与能力开发 (权重: 25%)</h5>
+                 <div class="score-option">
+                    <label><input type="radio" name="sm_talent_train" value="1" required> <span>[1分] 应每年为网络安全员工提供基础内部培训课程，如网络安全基础知识、操作系统安全等。</span></label>
+                    <label><input type="radio" name="sm_talent_train" value="2"> <span>[2分] 应拓展培训内容与方式，邀请外部专家开展专题培训，如网络攻防实战、安全法规解读等，组织员工参加线上线下混合式培训项目，每季度定期进行员工培训，人均培训处于较低水平，建立员工培训档案跟踪培训成果转化。</span></label>
+                    <label><input type="radio" name="sm_talent_train" value="3"> <span>[3分] 应构建全面的网络安全人才培训体系，根据员工岗位与职业发展规划定制个性化培训路径，包括内部轮岗培训、导师制项目等，人均培训达到一定时长以上，设立培训效果评估指标体系。</span></label>
+                    <label><input type="radio" name="sm_talent_train" value="4"> <span>[4分] 应打造全行业培训与能力开发平台，选派优秀员工参加全行业网络安全培训课程与研讨会，与全行业知名企业开展人才交换培训项目，引进全行业先进培训资源与方法，人均培训时长处于较高水平。</span></label>
+                    <label><input type="radio" name="sm_talent_train" value="5"> <span>[5分] 应与全球顶尖科研机构合作开展前沿技术研究培训，如量子加密技术应用、人工智能安全研发等，建立全球培训网络与知识共享平台，人均培训时长处于行业领先水平。</span></label>
+                  </div>
+            </div>
+            <div class="indicator-l3">
+                 <h5>人才激励与绩效 (权重: 25%)</h5>
+                 <div class="score-option">
+                     <label><input type="radio" name="sm_talent_incent" value="1" required> <span>[1分] 应设立基础网络安全人才绩效奖金制度。</span></label>
+                     <label><input type="radio" name="sm_talent_incent" value="2"> <span>[2分] 应完善绩效评估指标体系，纳入安全项目成果、技术创新贡献等因素。</span></label>
+                     <label><input type="radio" name="sm_talent_incent" value="3"> <span>[3分] 应构建多层次人才激励机制，将个人绩效与团队、部门绩效挂钩，全面提升人才激励效果。</span></label>
+                     <label><input type="radio" name="sm_talent_incent" value="4"> <span>[4分] 应打造完善的人才激励与绩效管理模式，依据全行业业务绩效指标与文化差异制定激励策略，建立人才绩效排名与对标机制。</span></label>
+                     <label><input type="radio" name="sm_talent_incent" value="5"> <span>[5分] 应采用股权期权激励、全球创新成果分红等前沿激励方式，设立全球人才创新基金支持员工自主创业与项目孵化，将人才激励与公司长期发展战略、全球行业影响力提升深度融合。</span></label>
+                  </div>
+            </div>
+            <div class="indicator-l3">
+                 <h5>安全意识教育 (权重: 15%)</h5>
+                 <div class="score-option">
+                     <label><input type="radio" name="sm_talent_aware" value="1" required> <span>[1分] 应每年组织全体员工参加一次网络安全意识基础培训，通过简单的讲座与宣传资料发放，普及网络安全基础知识。</span></label>
+                     <label><input type="radio" name="sm_talent_aware" value="2"> <span>[2分] 应丰富安全意识教育形式，制作网络安全宣传视频、开展线上知识竞赛等活动，定期推送安全提示信息。</span></label>
+                     <label><input type="radio" name="sm_talent_aware" value="3"> <span>[3分] 应构建全面的安全意识教育体系，针对不同部门与岗位制定个性化教育内容，开展安全演练与模拟攻击活动。</span></label>
+                     <label><input type="radio" name="sm_talent_aware" value="4"> <span>[4分] 应不同业务文化与法规要求，定制多层次的安全意识教育材料，定期开展安全宣传活动，提升安全意识普及度。</span></label>
+                     <label><input type="radio" name="sm_talent_aware" value="5"> <span>[5分] 应与全球公益组织、行业协会合作开展大型网络安全公益活动，将公司安全意识教育经验与模式向全球推广。</span></label>
+                 </div>
+            </div>
+        </div>
+
+        <div class="assessment-section">
+             <h3 class="indicator-l2">五、自主可控 (权重: 15%)</h3>
+            <div class="indicator-l3">
+                 <h5>国产替代计划完成情况 (权重: 40%)</h5>
+                 <div class="score-option">
+                    <label><input type="radio" name="sm_control_local" value="1" required> <span>[1分] 应确定部分非关键网络设备的国产替代清单，完成少量低风险区域国产设备的初步选型与试点部署。</span></label>
+                    <label><input type="radio" name="sm_control_local" value="2"> <span>[2分] 应启动基础网络安全设备的国产替代评估，在主要业务网络中逐步替换部分核心网络设备及软件系统。</span></label>
+                    <label><input type="radio" name="sm_control_local" value="3"> <span>[3分] 应在关键领域和核心技术中逐步实施国产化替代，国产设备的采用率达到一定比例。</span></label>
+                    <label><input type="radio" name="sm_control_local" value="4"> <span>[4分] 应深度实施国产替代方案，除少数特殊场景外，基本完成网络基础设施、安全防护系统及关键业务应用的国产替代，实现国产设备与系统间的稳定协同工作，持续优化国产产品组合与配置。</span></label>
+                    <label><input type="radio" name="sm_control_local" value="5"> <span>[5分] 应实现国产化替代的全面整合，包括在关键领域和核心技术中完全采用国产解决方案，基于国产技术为全球网络安全提供全新解决方案与模式。</span></label>
+                 </div>
+            </div>
+            <div class="indicator-l3">
+                 <h5>全栈技术自主可控覆盖情况 (权重: 60%)</h5>
+                 <div class="score-option">
+                     <label><input type="radio" name="sm_control_tech" value="1" required> <span>[1分] 应实现部分简单基础技术的自主研发或基于开源项目的国产化改造。</span></label>
+                     <label><input type="radio" name="sm_control_tech" value="2"> <span>[2分] 应拓展自主可控技术覆盖范围，涵盖网络安全中间件、数据库管理系统等。</span></label>
+                     <label><input type="radio" name="sm_control_tech" value="3"> <span>[3分] 应深化网络安全主要技术栈的自主可控，建立全栈技术自主可控框架，对关键技术点进行自研与外部合作相结合的开发模式，确保技术可控性与稳定性。</span></label>
+                     <label><input type="radio" name="sm_control_tech" value="4"> <span>[4分] 应实现网络安全主要技术栈的全面自主可控，包括高级威胁检测算法、加密通信技术等核心技术领域，构建从底层硬件到上层应用的完整自主可控技术链。</span></label>
+                     <label><input type="radio" name="sm_control_tech" value="5"> <span>[5分] 应实现从硬件到软件、从底层架构到应用层的全面技术自主可控，包括关键算法、操作系统、数据库、中间件等，确保整个技术栈的安全、可靠和高效，能够独立进行技术升级与创新，技术指标达到行业先进水平。</span></label>
+                 </div>
+            </div>
+        </div>
+
+
+         <div style="text-align: center; margin-top: 30px;">
+            <button type="button" id="calculateBtn" onclick="calculateScore()">计算得分</button>
+            <button type="button" id="generateExcelBtn" style="display: none;" onclick="generateExcelReport()">下载为Excel (.xlsx)</button>
+            <button type="button" id="generateTextReportBtn" style="display: none;" onclick="generateTextReport()">生成评估报告 (文本版)</button>
+            <button type="button" id="generateWordReportBtn" style="display: none;" onclick="generateWordReport()">下载评估报告 (Word)</button>
+            
+            <button type="button" id="aiReportBtn" onclick="window.open('https://cloud.fastgpt.cn/chat/share?shareId=ertgu0vnudcn8m27ipkjnkgn', '_blank');">AI报告编写</button>
+        </div>
+
+    </form>
+
+    <div id="results">
+        <h2>评估结果</h2>
+        <div id="scores"><p>请先完成所有评估项的选择，然后点击计算按钮。</p></div>
+        <div id="calculationDetails" style="display: none;"><h4>计算过程:</h4><div id="calculationContent"></div></div>
+        <div id="chartRow">
+            <div id="barChartContainer"><canvas id="barChart"></canvas></div>
+            <div id="radarChartContainer"><canvas id="radarChart"></canvas></div>
+        </div>
+        <div id="aiAnalysisSection" style="display: none;"><h3><i class="fas fa-brain" style="margin-right: 8px;"></i>AI 智能分析与建议</h3><div id="aiAnalysisContent"><p>正在生成分析结果...</p></div></div>
+        <div id="textReportContainer" style="display: none;"><h3><i class="fas fa-file-alt" style="margin-right: 8px;"></i>生成的文本报告</h3><p>您可以复制下面的报告文本。</p><textarea id="textReportOutput" rows="25" readonly></textarea></div>
+        <div class="notes">
+            <p><strong>注：</strong></p>
+            <ul>
+                <li>二级指标得分范围为 1-5 分，三级指标为其贡献原始得分（1-5分）。</li>
+                <li>安全管理域总得分范围为 1-5 分。</li>
+                <li>上方“指标得分详情”展示了二级指标的最终得分和其对应的三级指标原始得分及权重。</li>
+                <li>“计算过程”部分展示了得分的详细推导过程。</li>
+                <li>图表区用柱状图（左）和雷达图（右）展示了二级指标的最终得分 (图表高度已设为一致)。</li>
+                <li>下方提供了基于评估结果的 AI 智能分析与建议 (模拟)。</li>
+                 <li>点击“下载为Excel (.xlsx)”可生成包含详细得分数据的 Excel 文件。</li>
+                <li>点击“生成评估报告 (文本版)”可在页面下方生成可复制的纯文本报告。</li>
+                <li>点击“下载评估报告 (Word)”可生成包含文本和图表的 .doc 文件。</li>
+                <li>点击“AI报告编写”可在新标签页打开 FastGPT 链接。</li>
+            </ul>
+         </div>
+    </div>
+
+    <script>
+        // --- Data Model (使用综合调整后的 L2 和 L3 权重) ---
+        const assessmentData = {
+            domainName: "安全管理",
+            domainWeight: 0.20, // 示例域权重
+            indicatorsL2: [
+                { name: "制度管理", weight: 0.20, indicatorsL3: [ { id: "sm_policy_mech", name: "管理机制", weight: 0.30 }, { id: "sm_policy_complete", name: "体系完善", weight: 0.30 }, { id: "sm_policy_exec", name: "制度执行", weight: 0.40 } ]},
+                { name: "审核管理", weight: 0.15, indicatorsL3: [ { id: "sm_audit_assess", name: "考核机制", weight: 0.40 }, { id: "sm_audit_apply", name: "考核结果运用", weight: 0.60 } ]},
+                { name: "供应链安全", weight: 0.25, indicatorsL3: [ { id: "sm_supply_assess", name: "安全评估", weight: 0.40 }, { id: "sm_supply_riskctrl", name: "风险管控机制", weight: 0.60 } ]},
+                { name: "安全人才", weight: 0.25, indicatorsL3: [ { id: "sm_talent_recruit", name: "招聘与选拔", weight: 0.20 }, { id: "sm_talent_cert", name: "人才认证", weight: 0.15 }, { id: "sm_talent_train", name: "专业培训与能力开发", weight: 0.25 }, { id: "sm_talent_incent", name: "人才激励与绩效", weight: 0.25 }, { id: "sm_talent_aware", name: "安全意识教育", weight: 0.15 } ]},
+                { name: "自主可控", weight: 0.15, indicatorsL3: [ { id: "sm_control_local", name: "国产替代计划完成情况", weight: 0.40 }, { id: "sm_control_tech", name: "全栈技术自主可控覆盖情况", weight: 0.60 } ]}
+            ]
+        };
+
+        // --- Global Variables ---
+        let radarChartInstance = null; let barChartInstance = null; let reportData = null; let calculationSteps = "";
+
+        // --- Calculation Logic ---
+        function calculateScore() {
+            let domainTotalScore = 0; const labelsL2 = []; const dataL2 = [];
+            const detailedReportData = { domainName: assessmentData.domainName, assessmentTime: new Date().toLocaleString('zh-CN', { hour12: false }), l2Results: [], overallScore: 0 };
+            calculationSteps = "计算过程分解:\n\n"; let allSelected = true;
+            assessmentData.indicatorsL2.forEach(indicatorL2 => {
+                let scoreL2 = 0; let l2CalcString = `${indicatorL2.name} 得分 = `; const l3ResultsForReport = []; let l3CalcParts = []; let totalL3WeightForThisL2 = 0;
+                indicatorL2.indicatorsL3.forEach(indicatorL3 => {
+                     totalL3WeightForThisL2 += indicatorL3.weight; const selectedRadio = document.querySelector(`input[name="${indicatorL3.id}"]:checked`);
+                    if (selectedRadio) { const scoreL3 = parseFloat(selectedRadio.value); const descriptionL3 = selectedRadio.nextElementSibling.textContent.trim(); scoreL2 += scoreL3 * indicatorL3.weight; l3CalcParts.push(`(${scoreL3} * ${indicatorL3.weight.toFixed(2)})`); l3ResultsForReport.push({ name: indicatorL3.name, score: scoreL3, description: descriptionL3 }); } else { allSelected = false; } });
+                 if (Math.abs(totalL3WeightForThisL2 - 1.0) > 0.01 && totalL3WeightForThisL2 > 0) { console.warn(`L3 weights for ${indicatorL2.name} do not sum to 1. Normalizing score.`); scoreL2 = scoreL2 / totalL3WeightForThisL2; } scoreL2 = Math.min(Math.max(scoreL2, 1), 5);
+                l2CalcString += l3CalcParts.join(' + ') + ` ≈ ${scoreL2.toFixed(2)}`; calculationSteps += l2CalcString + "\n"; labelsL2.push(indicatorL2.name); dataL2.push(scoreL2.toFixed(2));
+                detailedReportData.l2Results.push({ name: indicatorL2.name, score: scoreL2.toFixed(2), weight: indicatorL2.weight, l3Details: l3ResultsForReport });
+            });
+            let domainCalcString = `${assessmentData.domainName}域总分 = `; let domainCalcParts = []; let totalL2Weight = 0;
+             detailedReportData.l2Results.forEach(l2 => { domainTotalScore += parseFloat(l2.score) * l2.weight; domainCalcParts.push(`(${l2.score} * ${l2.weight.toFixed(2)})`); totalL2Weight += l2.weight; });
+             if (Math.abs(totalL2Weight - 1.0) > 0.01 && totalL2Weight > 0) { console.warn(`L2 weights for ${assessmentData.domainName} do not sum to 1. Normalizing score.`); domainTotalScore = domainTotalScore / totalL2Weight; } domainTotalScore = Math.min(Math.max(domainTotalScore, 1), 5);
+            domainCalcString += domainCalcParts.join(' + ') + ` ≈ ${domainTotalScore.toFixed(2)}`; calculationSteps += "\n" + domainCalcString + "\n";
+            const resultsScoresDiv = document.getElementById('scores'); const calculationDiv = document.getElementById('calculationContent'); const calculationContainer = document.getElementById('calculationDetails');
+            const generateTextReportBtn = document.getElementById('generateTextReportBtn'); const generateWordReportBtn = document.getElementById('generateWordReportBtn'); const generateExcelBtn = document.getElementById('generateExcelBtn');
+            const aiAnalysisSection = document.getElementById('aiAnalysisSection'); const aiAnalysisContent = document.getElementById('aiAnalysisContent'); const textReportContainer = document.getElementById('textReportContainer'); const textReportOutput = document.getElementById('textReportOutput');
+            if (!allSelected) {
+                 resultsScoresDiv.innerHTML = "<p style='color: red; font-weight: bold; text-align: center;'>错误：请确保所有评估项都已选择！</p>"; calculationContainer.style.display = 'none'; aiAnalysisSection.style.display = 'none'; aiAnalysisContent.innerHTML = '<p>请先完成评估并计算得分。</p>'; textReportContainer.style.display = 'none'; textReportOutput.value = ''; if (radarChartInstance) { radarChartInstance.destroy(); radarChartInstance = null; } if (barChartInstance) { barChartInstance.destroy(); barChartInstance = null; }
+                 generateTextReportBtn.style.display = 'none'; generateWordReportBtn.style.display = 'none'; generateExcelBtn.style.display = 'none'; reportData = null; return;
+            }
+            detailedReportData.overallScore = domainTotalScore.toFixed(2); reportData = detailedReportData;
+            let resultsHTML = `<h4>指标得分详情:</h4>`;
+            detailedReportData.l2Results.forEach(l2 => { const l2WeightText = `(权重: ${(l2.weight * 100).toFixed(0)}%)`; resultsHTML += `<div class="l2-score-item"><h5>${l2.name} ${l2WeightText} (二级指标得分): ${l2.score}</h5>`; if (l2.l3Details && l2.l3Details.length > 0) { resultsHTML += `<ul class="l3-score-list">`; const l2Def = assessmentData.indicatorsL2.find(item => item.name === l2.name); l2.l3Details.forEach(l3 => { const l3Def = l2Def?.indicatorsL3.find(item => item.name === l3.name); const l3WeightText = l3Def ? ` (权重: ${(l3Def.weight * 100).toFixed(0)}%)` : ""; resultsHTML += `<li>${l3.name} (原始得分): ${l3.score}${l3WeightText}</li>`; }); resultsHTML += `</ul>`; } resultsHTML += `</div>`; });
+            resultsHTML += `<hr><h4>${assessmentData.domainName}域总得分: ${detailedReportData.overallScore} / 5.00</h4>`; resultsScoresDiv.innerHTML = resultsHTML;
+            calculationDiv.textContent = calculationSteps; calculationContainer.style.display = 'block';
+            updateRadarChart(labelsL2, dataL2); updateBarChart(labelsL2, dataL2);
+            const analysisHTML = generateAIAnalysis(reportData, 'html'); aiAnalysisContent.innerHTML = analysisHTML; aiAnalysisSection.style.display = 'block';
+            generateTextReportBtn.style.display = 'inline-block'; generateWordReportBtn.style.display = 'inline-block'; generateExcelBtn.style.display = 'inline-block';
+            textReportContainer.style.display = 'none'; textReportOutput.value = '';
+        }
+
+        // --- Visualization Logic: Radar Chart ---
+        function updateRadarChart(labels, data) {
+            const ctx = document.getElementById('radarChart').getContext('2d'); if (radarChartInstance) { radarChartInstance.destroy(); }
+            const radarLineColor = '#005BAC'; const radarFillColor = 'rgba(70, 130, 180, 0.3)'; const radarPointColor = '#003366';
+            const radarPointStrokeColor = '#FFFFFF'; const radarPointHighlightFill = '#87CEEB'; const radarPointHighlightStroke = radarPointColor;
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar', data: { labels: labels, datasets: [{ label: `二级指标得分 (雷达图)`, data: data, fill: true, backgroundColor: radarFillColor, borderColor: radarLineColor, pointBackgroundColor: radarPointColor, pointBorderColor: radarPointStrokeColor, pointHoverBackgroundColor: radarPointHighlightFill, pointHoverBorderColor: radarPointHighlightStroke, pointRadius: 4, pointHoverRadius: 6, borderWidth: 2.5, tension: 0.1 }] },
+                options: { responsive: true, maintainAspectRatio: false, elements: { line: {} }, scales: { r: { min: 0, max: 5, ticks: { stepSize: 1, backdropColor: 'rgba(255, 255, 255, 0.6)', color: '#444', font: { size: 11 } }, pointLabels: { font: { size: 13, weight: '500' }, color: '#333' }, angleLines: { color: 'rgba(0, 0, 0, 0.1)' }, grid: { color: 'rgba(0, 0, 0, 0.1)' } } }, plugins: { legend: { position: 'top', labels: { padding: 10, font: {size: 13} } }, tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.75)', titleFont: { weight: 'bold' }, bodyFont: { size: 13 }, padding: 10, callbacks: { label: context => `${context.label}: ${context.parsed.r.toFixed(2)}` } } } }
+            });
+        }
+
+        // --- Visualization Logic: Bar Chart ---
+        function updateBarChart(labels, data) {
+            const ctx = document.getElementById('barChart').getContext('2d'); if (barChartInstance) { barChartInstance.destroy(); }
+             const barBgColor = 'rgba(95, 158, 160, 0.6)'; const barBorderColor = 'rgb(70, 130, 180)'; const barHoverBgColor = 'rgba(70, 130, 180, 0.8)'; const barHoverBorderColor = 'rgb(0, 51, 102)';
+            barChartInstance = new Chart(ctx, {
+                type: 'bar', data: { labels: labels, datasets: [{ label: `二级指标得分 (柱状图)`, data: data, backgroundColor: barBgColor, borderColor: barBorderColor, borderWidth: 1, hoverBackgroundColor: barHoverBgColor, hoverBorderColor: barHoverBorderColor, barPercentage: 0.7, categoryPercentage: 0.8 }] },
+                options: { responsive: true, maintainAspectRatio: false, indexAxis: 'x', scales: { y: { beginAtZero: true, min: 0, max: 5, title: { display: true, text: '得分', font: {size: 13} }, ticks: { color: '#444' } }, x: { title: { display: false }, ticks: { font: { size: 13 }, color: '#444' } } }, plugins: { legend: { display: true, position: 'top', labels: { padding: 10, font: {size: 13} } }, tooltip: { backgroundColor: 'rgba(0, 0, 0, 0.75)', titleFont: { weight: 'bold' }, bodyFont: { size: 13 }, padding: 10, callbacks: { label: context => `${context.label}: ${context.parsed.y.toFixed(2)}` } } } }
+            });
+        }
+
+        // --- AI Analysis Generation ---
+        function generateAIAnalysis(reportData, format = 'html') {
+             let analysisOutput = ""; const overallScore = parseFloat(reportData.overallScore); let overallLevel = ""; let overallSummary = "";
+             let strengths = []; let weaknesses = []; const LOW_THRESHOLD = 2.5; const HIGH_THRESHOLD = 4.0; const newLine = format === 'text' ? '\n' : '<br>';
+             const headingStart = format === 'text' ? '### ' : '<h5>'; const headingEnd = format === 'text' ? ' ###' + newLine : '</h5>'; const listStart = format === 'text' ? '' : '<ul>';
+             const listEnd = format === 'text' ? '' : '</ul>'; const itemStart = format === 'text' ? '- ' : '<li>'; const itemEnd = format === 'text' ? newLine : '</li>';
+             const boldStart = format === 'text' ? '**' : '<strong>'; const boldEnd = format === 'text' ? '**' : '</strong>';
+             let levelText = ""; if (overallScore < LOW_THRESHOLD) levelText = "基础水平"; else if (overallScore < HIGH_THRESHOLD) levelText = "发展中水平"; else levelText = "良好水平";
+             overallLevel = format === 'html' ? (overallScore < LOW_THRESHOLD ? `<span class='low-score'>${levelText}</span>` : (overallScore < HIGH_THRESHOLD ? `<span class='medium-score'>${levelText}</span>` : `<span class='high-score'>${levelText}</span>`)) : levelText;
+             if (overallScore < LOW_THRESHOLD) overallSummary = `当前${assessmentData.domainName}能力处于基础水平，在制度、审核、供应链、人才、自主可控等方面存在较多改进空间。建议优先关注得分低于 ${LOW_THRESHOLD} 分的领域。`;
+            else if (overallScore < HIGH_THRESHOLD) overallSummary = `${assessmentData.domainName}能力处于发展阶段，已具备一定的管理基础，但在流程执行、结果应用、人才体系、技术自主化深度等方面仍有提升潜力。建议持续优化现有机制，特别关注得分低于 ${HIGH_THRESHOLD} 分的领域。`;
+            else overallSummary = `${assessmentData.domainName}能力表现良好，管理体系较为成熟。建议保持现有优势，关注管理效率的提升和智能化管理手段的应用。`;
+             analysisOutput += `${headingStart}总体评价:${headingEnd}`; analysisOutput += (format === 'html' ? '<p>' : '') + `根据评估结果，您在 ${boldStart}${reportData.domainName}${boldEnd} 域的总体得分为 ${boldStart}${overallScore.toFixed(2)}${boldEnd} (满分 5.00)，处于 ${overallLevel}。` + (format === 'html' ? '</p>' : newLine);
+             analysisOutput += (format === 'html' ? '<p>' : '') + overallSummary + (format === 'html' ? '</p>' : (newLine + newLine));
+             analysisOutput += `${headingStart}各指标分析与建议:${headingEnd}${listStart}`;
+             reportData.l2Results.forEach(l2 => {
+                 const score = parseFloat(l2.score); let indicatorStatus = ""; let suggestion = ""; let statusText = "";
+                 if (score < LOW_THRESHOLD) { weaknesses.push(l2.name); statusText = "有待加强"; indicatorStatus = format === 'html' ? `<span class='low-score'>${statusText}</span>` : `(${statusText})`;
+                     if (l2.name === "制度管理") suggestion = "需建立基础的管理机制、完善制度体系并确保执行。"; else if (l2.name === "审核管理") suggestion = "需建立考核机制并将结果用于基础改进，如培训。"; else if (l2.name === "供应链安全") suggestion = "需开始建立供应链安全评估和风险管控的基本流程。"; else if (l2.name === "安全人才") suggestion = "需加强招聘、培训、认证、激励、意识教育等基础工作。"; else if (l2.name === "自主可控") suggestion = "需启动国产化替代评估和基础技术的自主化改造。"; else suggestion = "需重点关注并投入资源进行改进。";
+                 } else if (score < HIGH_THRESHOLD) { statusText = "存在提升空间"; indicatorStatus = format === 'html' ? `<span class='medium-score'>${statusText}</span>` : `(${statusText})`;
+                     if (l2.name === "制度管理") suggestion = "建议深化制度体系的覆盖面和动态更新能力，加强执行监督。"; else if (l2.name === "审核管理") suggestion = "建议完善考核指标，将结果应用于绩效和部门改进。"; else if (l2.name === "供应链安全") suggestion = "建议完善供应商评估流程和风险控制措施。"; else if (l2.name === "安全人才") suggestion = "建议构建系统化的人才培养、认证和激励体系，深化安全意识教育。"; else if (l2.name === "自主可控") suggestion = "建议在关键领域推进国产化替代，深化技术栈自主可控程度。"; else suggestion = "持续改进，参考更高标准优化。";
+                 } else { strengths.push(l2.name); statusText = "表现良好"; indicatorStatus = format === 'html' ? `<span class='high-score'>${statusText}</span>` : `(${statusText})`;
+                     if (l2.name === "制度管理") suggestion = "考虑引入智能化、自适应的制度管理平台，保持体系领先性。"; else if (l2.name === "审核管理") suggestion = "建议将审核结果应用于战略调整和风险预警，提升管理价值。"; else if (l2.name === "供应链安全") suggestion = "建议构建全生命周期、动态智能的供应链风险管理体系。"; else if (l2.name === "安全人才") suggestion = "建议参与行业标准制定，打造全球化人才战略。"; else if (l2.name === "自主可控") suggestion = "建议追求全栈技术的全面自主可控，并形成行业影响力。"; else suggestion = "保持并巩固现有成果。";
+                 }
+                 analysisOutput += `${itemStart}${boldStart}${l2.name}${boldEnd} (得分: ${score.toFixed(2)})：${indicatorStatus}。${boldStart}建议：${boldEnd}${suggestion}${itemEnd}`;
+             }); analysisOutput += listEnd;
+             analysisOutput += `${headingStart}关键点总结:${headingEnd}`;
+             if (strengths.length > 0) analysisOutput += (format === 'html' ? '<p>' : '') + `${boldStart}主要优势领域：${boldEnd} ${strengths.join('、')}。` + (format === 'html' ? '</p>' : newLine); else analysisOutput += (format === 'html' ? '<p>' : '') + `${boldStart}主要优势领域：${boldEnd} 暂无明显优势项。` + (format === 'html' ? '</p>' : newLine);
+             if (weaknesses.length > 0) analysisOutput += (format === 'html' ? '<p>' : '') + `${boldStart}主要改进领域：${boldEnd} ${weaknesses.join('、')}。` + (format === 'html' ? '</p>' : (newLine + newLine)); else if (overallScore < HIGH_THRESHOLD) analysisOutput += (format === 'html' ? '<p>' : '') + `${boldStart}主要改进领域：${boldEnd} 各项指标相对均衡，建议全面持续优化。` + (format === 'html' ? '</p>' : (newLine + newLine)); else analysisOutput += (format === 'html' ? '<p>' : '') + `${boldStart}主要改进领域：${boldEnd} 各项指标均表现良好。` + (format === 'html' ? '</p>' : (newLine + newLine));
+             return analysisOutput;
+        }
+
+        // --- Generate Text Report ---
+        function generateTextReport() {
+            if (!reportData) { alert("请先完成评估并点击“计算得分”按钮。"); return; }
+            const textReportContainer = document.getElementById('textReportContainer'); const textReportOutput = document.getElementById('textReportOutput');
+            let reportString = ""; const today = new Date(); const assessmentDate = today.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric'});
+            reportString += `========================================\n     ${assessmentData.domainName}评估报告 (文本版) \n========================================\n\n评估日期: ${assessmentDate}\n评估对象: [请填写评估对象]\n报告版本: 1.0\n\n`;
+            reportString += `----------------------------------------\n          1. 执行摘要\n----------------------------------------\n`;
+            const overallScore = parseFloat(reportData.overallScore); let overallLevelText = ""; if (overallScore < 2.5) overallLevelText = "基础水平"; else if (overallScore < 4.0) overallLevelText = "发展中水平"; else overallLevelText = "良好水平";
+            let strengths = reportData.l2Results.filter(l2 => parseFloat(l2.score) >= 4.0).map(l2 => l2.name); let weaknesses = reportData.l2Results.filter(l2 => parseFloat(l2.score) < 2.5).map(l2 => l2.name);
+            reportString += `本次${assessmentData.domainName}评估总体得分为 ${reportData.overallScore} 分（满分 5.00 分），处于 "${overallLevelText}"。\n\n主要发现:\n`; if (strengths.length > 0) { reportString += `- 优势领域: ${strengths.join('、')} 得分相对较高。\n`; } else { reportString += `- 优势领域: 暂无得分达到4.0分以上的明显优势项。\n`; } if (weaknesses.length > 0) { reportString += `- 薄弱环节: ${weaknesses.join('、')} 得分显著偏低，是主要短板。\n`; } else { reportString += `- 薄弱环节: 各项得分相对均衡，无得分低于2.5分的显著短板。\n`; } reportString += `- 其他领域得分处于中等水平，均有不同程度的改进空间。\n\n核心建议:\n- 优先加强 ${weaknesses.length > 0 ? `"${weaknesses.join('", "')}"` : "得分相对较低的领域"} 的建设。\n- 巩固 ${strengths.length > 0 ? `"${strengths.join('", "')}"` : "得分相对较高的领域"} 的优势。\n- 全面审视和优化各项安全管理活动。\n\n`;
+            reportString += `----------------------------------------\n       2. 评估范围与方法\n----------------------------------------\n- 评估范围: ${assessmentData.domainName}，包括${assessmentData.indicatorsL2.map(l2=>l2.name).join('、')}等二级指标及其下属三级指标。\n- 评估方法: 基于预设框架进行自评估打分，依据权重计算各级指标得分。\n\n`;
+            reportString += `----------------------------------------\n       3. 详细评估结果与分析\n----------------------------------------\n${assessmentData.domainName}总体得分: ${reportData.overallScore} / 5.00\n\n各二级指标得分详情:\n`;
+            reportData.l2Results.forEach(l2 => { const l2WeightText = `(权重: ${(l2.weight * 100).toFixed(0)}%)`; reportString += `\n--- ${l2.name} ${l2WeightText} (二级指标得分: ${l2.score}) ---\n`; const l2Def = assessmentData.indicatorsL2.find(item => item.name === l2.name); l2.l3Details.forEach(l3 => { const l3Def = l2Def?.indicatorsL3.find(item => item.name === l3.name); const l3WeightText = l3Def ? `(权重: ${(l3Def.weight * 100).toFixed(0)}%)` : ""; reportString += `  - ${l3.name} (原始得分: ${l3.score}) ${l3WeightText}\n`; }); });
+            reportString += `\n----------------------------------------\n       4. 评估结果可视化 (描述)\n----------------------------------------\n- 柱状图和雷达图 (未包含在此文本报告中) 可直观展示各二级指标得分高低及能力均衡性。\n- 从得分看，${strengths.length > 0 ? `"${strengths.join('", "')}"` : "部分领域"}表现较好，而 ${weaknesses.length > 0 ? `"${weaknesses.join('", "')}"` : "部分领域"}有明显不足。\n`;
+            reportString += `\n----------------------------------------\n       5. 智能分析与建议 (模拟)\n----------------------------------------\n${generateAIAnalysis(reportData, 'text')}`;
+            reportString += `\n----------------------------------------\n       6. 详细改进建议\n----------------------------------------\n`;
+            let recommendationCount = 1; const highPrioritySuggestions_text = []; const mediumPrioritySuggestions_text = []; const lowPrioritySuggestions_text = [];
+            reportData.l2Results.forEach(l2 => { const score = parseFloat(l2.score); let suggestion = ""; if (score < 2.5) { if (l2.name === "制度管理") suggestion = "需建立基础的管理机制、完善制度体系并确保执行。"; else if (l2.name === "审核管理") suggestion = "需建立考核机制并将结果用于基础改进，如培训。"; else if (l2.name === "供应链安全") suggestion = "需开始建立供应链安全评估和风险管控的基本流程。"; else if (l2.name === "安全人才") suggestion = "需加强招聘、培训、认证、激励、意识教育等基础工作。"; else if (l2.name === "自主可控") suggestion = "需启动国产化替代评估和基础技术的自主化改造。"; else suggestion = "投入资源进行重点改进。"; highPrioritySuggestions_text.push({ name: l2.name, suggestion: suggestion }); } else if (score < 4.0) { if (l2.name === "制度管理") suggestion = "建议深化制度体系的覆盖面和动态更新能力，加强执行监督。"; else if (l2.name === "审核管理") suggestion = "建议完善考核指标，将结果应用于绩效和部门改进。"; else if (l2.name === "供应链安全") suggestion = "建议完善供应商评估流程和风险控制措施。"; else if (l2.name === "安全人才") suggestion = "建议构建系统化的人才培养、认证和激励体系，深化安全意识教育。"; else if (l2.name === "自主可控") suggestion = "建议在关键领域推进国产化替代，深化技术栈自主可控程度。"; else suggestion = "持续改进，参考更高标准优化。"; mediumPrioritySuggestions_text.push({ name: l2.name, suggestion: suggestion }); } else { if (l2.name === "制度管理") suggestion = "考虑引入智能化、自适应的制度管理平台，保持体系领先性。"; else if (l2.name === "审核管理") suggestion = "建议将审核结果应用于战略调整和风险预警，提升管理价值。"; else if (l2.name === "供应链安全") suggestion = "建议构建全生命周期、动态智能的供应链风险管理体系。"; else if (l2.name === "安全人才") suggestion = "建议参与行业标准制定，打造全球化人才战略。"; else if (l2.name === "自主可控") suggestion = "建议追求全栈技术的全面自主可控，并形成行业影响力。"; else suggestion = "保持并巩固现有成果。"; lowPrioritySuggestions_text.push({ name: l2.name, suggestion: suggestion }); } });
+            if (highPrioritySuggestions_text.length > 0) { reportString += `【高优先级 - 针对薄弱环节】:\n`; highPrioritySuggestions_text.forEach(item => { reportString += `${recommendationCount++}. ${item.name}: ${item.suggestion}\n`; }); reportString += `\n`; }
+            if (mediumPrioritySuggestions_text.length > 0) { reportString += `【中优先级 - 针对有提升空间的领域】:\n`; mediumPrioritySuggestions_text.forEach(item => { reportString += `${recommendationCount++}. ${item.name}: ${item.suggestion}\n`; }); reportString += `\n`; }
+            if (lowPrioritySuggestions_text.length > 0) { reportString += `【持续保持 - 针对优势领域】:\n`; lowPrioritySuggestions_text.forEach(item => { reportString += `${recommendationCount++}. ${item.name}: ${item.suggestion}\n`; }); reportString += `\n`; }
+            if(recommendationCount === 1){ reportString += "各项指标均表现出色，建议持续关注行业最佳实践和新兴威胁。\n\n"; }
+            reportString += `----------------------------------------\n          7. 结语\n----------------------------------------\n建议根据本报告提出的改进建议，结合实际业务情况，制定详细的行动计划，并定期复评（如每年）以跟踪进展和效果。\n\n--- 报告结束 ---\n`;
+            textReportOutput.value = reportString; textReportContainer.style.display = 'block'; textReportContainer.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+
+        // --- Generate Word Report ---
+        function generateWordReport() {
+             if (!reportData || !radarChartInstance || !barChartInstance) { alert("错误：无法生成Word报告。请先成功计算分数并确保图表已生成。"); return; }
+            let barChartImgData = null; let radarChartImgData = null; try { barChartImgData = document.getElementById('barChart').toDataURL('image/png', 1.0); } catch(e) { console.error("Error getting Bar Chart image data for Word:", e); } try { radarChartImgData = document.getElementById('radarChart').toDataURL('image/png', 1.0); } catch(e) { console.error("Error getting Radar Chart image data for Word:", e); }
+            const overallScore = parseFloat(reportData.overallScore); let overallLevelText = ""; if (overallScore < 2.5) overallLevelText = "基础水平"; else if (overallScore < 4.0) overallLevelText = "发展中水平"; else overallLevelText = "良好水平";
+            let strengths = reportData.l2Results.filter(l2 => parseFloat(l2.score) >= 4.0).map(l2 => l2.name); let weaknesses = reportData.l2Results.filter(l2 => parseFloat(l2.score) < 2.5).map(l2 => l2.name);
+            const today = new Date(); const assessmentDate = today.toLocaleDateString('zh-CN', { year: 'numeric', month: 'long', day: 'numeric'});
+            let htmlContent = ` <!DOCTYPE html><html lang="zh-CN"><head><meta charset="UTF-8"><meta http-equiv="X-UA-Compatible" content="IE=edge"><title>${assessmentData.domainName}评估报告</title> <style> body { font-family: 'SimSun', '宋体', serif; line-height: 1.6; margin: 30px; } h1, h2, h3 { color: #005BAC; margin-bottom: 10px; } h1 { text-align: center; font-size: 22pt; } h2 { font-size: 16pt; border-bottom: 1px solid #ccc; padding-bottom: 5px; margin-top: 25px; } h3 { font-size: 14pt; color: #004a8c; margin-top: 20px; } p { margin-bottom: 10px; font-size: 11pt; } ul { list-style-type: disc; margin-left: 40px; } li { margin-bottom: 5px; font-size: 11pt;} .l2-item { margin-bottom: 15px; padding-left: 10px; border-left: 3px solid #a8c7e0; } .l3-list { list-style-type: circle; margin-left: 20px; font-size: 10pt; color: #333; } .l3-list li { margin-bottom: 3px; } .l3-desc { color: #555; font-style: italic; margin-left: 15px; } .chart-container { text-align: center; margin-top: 15px; margin-bottom: 15px; } .chart-container img { max-width: 48%; height: auto; margin: 0 1%; border: 1px solid #eee; vertical-align: top;} .ai-section h3 { text-align: center; } .ai-section h5 { font-size: 12pt; color: #005BAC; margin-top: 15px; border-bottom: 1px dotted #ccc; } .ai-section strong { font-weight: bold; color: #003366; } .low-score { color: #dc3545; font-weight: bold; } .medium-score { color: #ffc107; font-weight: bold; } .high-score { color: #28a745; font-weight: bold; } .recommendation-list { list-style-type: decimal; margin-left: 20px; } .recommendation-list li { margin-bottom: 8px; } .recommendation-list ul { list-style-type: disc; margin-left: 20px; } .priority-high { font-weight: bold; color: #a94442; } .priority-medium { font-weight: bold; color: #8a6d3b; } .priority-low { font-weight: bold; color: #3c763d; } hr { border: 0; border-top: 1px solid #ccc; margin: 25px 0; } </style></head><body> <h1>${assessmentData.domainName}评估报告</h1><p><strong>评估日期:</strong> ${assessmentDate}</p><p><strong>评估对象:</strong> [请填写评估对象]</p><p><strong>报告版本:</strong> 1.0</p> <h2>1. 执行摘要</h2><p>本次${assessmentData.domainName}评估总体得分为 <strong>${reportData.overallScore}</strong> 分（满分 5.00 分），处于 "<strong>${overallLevelText}</strong>"。</p><p><strong>主要发现:</strong></p><ul><li>优势领域: ${strengths.length > 0 ? strengths.join('、') + ' 得分相对较高。' : '暂无得分达到4.0分以上的明显优势项。'}</li><li>薄弱环节: ${weaknesses.length > 0 ? weaknesses.join('、') + ' 得分显著偏低，是主要短板。' : '各项得分相对均衡，无得分低于2.5分的显著短板。'}</li><li>其他领域得分处于中等水平，均有不同程度的改进空间。</li></ul><p><strong>核心建议:</strong></p><ul><li>优先加强 ${weaknesses.length > 0 ? `"${weaknesses.join('", "')}"` : "得分相对较低的领域"} 的建设。</li><li>巩固 ${strengths.length > 0 ? `"${strengths.join('", "')}"` : "得分相对较高的领域"} 的优势。</li><li>全面审视和优化各项安全管理活动。</li></ul> <h2>2. 评估范围与方法</h2><p><strong>评估范围:</strong> ${assessmentData.domainName}，包括${assessmentData.indicatorsL2.map(l2=>l2.name).join('、')}等二级指标及其下属三级指标。</p><p><strong>评估方法:</strong> 基于预设框架进行自评估打分，依据权重计算各级指标得分。</p> <h2>3. 详细评估结果与分析</h2><p><strong>${assessmentData.domainName}总体得分: ${reportData.overallScore} / 5.00</strong></p> `;
+            reportData.l2Results.forEach(l2 => { const l2WeightText = `(权重: ${(l2.weight * 100).toFixed(0)}%)`; htmlContent += `<div class="l2-item"><h3>- ${l2.name} ${l2WeightText} (二级指标得分: ${l2.score})</h3>`; const l2Def = assessmentData.indicatorsL2.find(item => item.name === l2.name); if (l2.l3Details && l2.l3Details.length > 0) { htmlContent += `<ul class="l3-list">`; l2.l3Details.forEach(l3 => { const l3Def = l2Def?.indicatorsL3.find(item => item.name === l3.name); const l3WeightText = l3Def ? `(权重: ${(l3Def.weight * 100).toFixed(0)}%)` : ""; htmlContent += `<li><strong>${l3.name}</strong> (原始得分: ${l3.score}) ${l3WeightText}</li><li class="l3-desc">选择项: ${l3.description}</li>`; }); htmlContent += `</ul>`; } htmlContent += `</div>`; });
+            htmlContent += ` <h2>4. 评估结果可视化</h2><div class="chart-container"> `; if (barChartImgData) { htmlContent += `<img src="${barChartImgData}" alt="柱状图">`; } else { htmlContent += `<p>未能生成柱状图</p>`; } if (radarChartImgData) { htmlContent += `<img src="${radarChartImgData}" alt="雷达图">`; } else { htmlContent += `<p>未能生成雷达图</p>`; } htmlContent += `</div> <hr><div class="ai-section"><h2>5. 智能分析与建议 (模拟)</h2>${generateAIAnalysis(reportData, 'html')}</div><hr> `; htmlContent += `<h2>6. 详细改进建议</h2><ol class="recommendation-list">`;
+            let recommendationCount = 1; const highPrioritySuggestions = []; const mediumPrioritySuggestions = []; const lowPrioritySuggestions = [];
+            reportData.l2Results.forEach(l2 => { const score = parseFloat(l2.score); let suggestion = ""; if (score < 2.5) { if (l2.name === "制度管理") suggestion = "需建立基础的管理机制、完善制度体系并确保执行。"; else if (l2.name === "审核管理") suggestion = "需建立考核机制并将结果用于基础改进，如培训。"; else if (l2.name === "供应链安全") suggestion = "需开始建立供应链安全评估和风险管控的基本流程。"; else if (l2.name === "安全人才") suggestion = "需加强招聘、培训、认证、激励、意识教育等基础工作。"; else if (l2.name === "自主可控") suggestion = "需启动国产化替代评估和基础技术的自主化改造。"; else suggestion = "投入资源进行重点改进。"; highPrioritySuggestions.push({ name: l2.name, suggestion: suggestion }); } else if (score < 4.0) { if (l2.name === "制度管理") suggestion = "建议深化制度体系的覆盖面和动态更新能力，加强执行监督。"; else if (l2.name === "审核管理") suggestion = "建议完善考核指标，将结果应用于绩效和部门改进。"; else if (l2.name === "供应链安全") suggestion = "建议完善供应商评估流程和风险控制措施。"; else if (l2.name === "安全人才") suggestion = "建议构建系统化的人才培养、认证和激励体系，深化安全意识教育。"; else if (l2.name === "自主可控") suggestion = "建议在关键领域推进国产化替代，深化技术栈自主可控程度。"; else suggestion = "持续改进，参考更高标准优化。"; mediumPrioritySuggestions.push({ name: l2.name, suggestion: suggestion }); } else { if (l2.name === "制度管理") suggestion = "考虑引入智能化、自适应的制度管理平台，保持体系领先性。"; else if (l2.name === "审核管理") suggestion = "建议将审核结果应用于战略调整和风险预警，提升管理价值。"; else if (l2.name === "供应链安全") suggestion = "建议构建全生命周期、动态智能的供应链风险管理体系。"; else if (l2.name === "安全人才") suggestion = "建议参与行业标准制定，打造全球化人才战略。"; else if (l2.name === "自主可控") suggestion = "建议追求全栈技术的全面自主可控，并形成行业影响力。"; else suggestion = "保持并巩固现有成果。"; lowPrioritySuggestions.push({ name: l2.name, suggestion: suggestion }); } });
+            if (highPrioritySuggestions.length > 0) { htmlContent += `<li><strong class="priority-high">【高优先级 - 针对薄弱环节】:</strong><ul>`; highPrioritySuggestions.forEach(item => { htmlContent += `<li><strong>${item.name}:</strong> ${item.suggestion}</li>`; }); htmlContent += `</ul></li>`; } if (mediumPrioritySuggestions.length > 0) { htmlContent += `<li><strong class="priority-medium">【中优先级 - 针对有提升空间的领域】:</strong><ul>`; mediumPrioritySuggestions.forEach(item => { htmlContent += `<li><strong>${item.name}:</strong> ${item.suggestion}</li>`; }); htmlContent += `</ul></li>`; } if (lowPrioritySuggestions.length > 0) { htmlContent += `<li><strong class="priority-low">【持续保持 - 针对优势领域】:</strong><ul>`; lowPrioritySuggestions.forEach(item => { htmlContent += `<li><strong>${item.name}:</strong> ${item.suggestion}</li>`; }); htmlContent += `</ul></li>`; } if(highPrioritySuggestions.length === 0 && mediumPrioritySuggestions.length === 0 && lowPrioritySuggestions.length === 0){ htmlContent += "<li>各项指标均表现出色，建议持续关注行业最佳实践和新兴威胁。</li>"; } htmlContent += `</ol> <h2>7. 结语</h2><p>建议根据本报告提出的改进建议，结合实际业务情况，制定详细的行动计划，并定期复评（如每年）以跟踪进展和效果。</p> </body></html> `;
+            const blob = new Blob([htmlContent], { type: 'application/msword;charset=utf-8' }); const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.setAttribute("href", url); const safeTime = reportData.assessmentTime.replace(/[\/:]/g, '-').replace(/\s/g, '_'); const filename = `${assessmentData.domainName.replace(/\s+/g, '_')}_评估报告_${safeTime}.doc`; link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+        }
+
+        // --- Generate Excel Report ---
+        function generateExcelReport() {
+             if (!reportData) { alert("错误：请先完成评估并点击“计算得分”按钮。"); return; }
+            try {
+                const excelData = []; excelData.push([`${assessmentData.domainName}评估报告`]); excelData.push([]); excelData.push(["评估日期:", reportData.assessmentTime]); excelData.push(["评估对象:", "[请填写评估对象]"]); excelData.push(["总体得分:", `${reportData.overallScore} / 5.00`]); excelData.push([]); excelData.push(["二级指标", "二级指标得分", "二级指标权重", "三级指标", "三级指标原始得分", "三级指标权重", "选择的描述"]);
+                reportData.l2Results.forEach(l2 => { const l2Def = assessmentData.indicatorsL2.find(item => item.name === l2.name); if (l2.l3Details && l2.l3Details.length > 0) { l2.l3Details.forEach((l3, index) => { const l3Def = l2Def?.indicatorsL3.find(item => item.name === l3.name); const l3Weight = l3Def ? l3Def.weight : 'N/A'; excelData.push([ index === 0 ? l2.name : "", index === 0 ? l2.score : "", index === 0 ? (l2.weight * 100).toFixed(0) + "%" : "", l3.name, l3.score, l3Weight !== 'N/A' ? (l3Weight * 100).toFixed(0) + "%" : 'N/A', l3.description ]); }); } else { excelData.push([ l2.name, l2.score, (l2.weight * 100).toFixed(0) + "%", "N/A", "N/A", "N/A", "N/A" ]); } excelData.push([]); });
+                const ws = XLSX.utils.aoa_to_sheet(excelData); ws['!cols'] = [ { wch: 15 }, { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 18 }, { wch: 15 }, { wch: 80 } ];
+                const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "评估结果");
+                const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' }); const blob = new Blob([excelBuffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet;charset=UTF-8" });
+                const link = document.createElement("a"); const url = URL.createObjectURL(blob); link.setAttribute("href", url); const safeTime = reportData.assessmentTime.replace(/[\/:]/g, '-').replace(/\s/g, '_'); const filename = `${assessmentData.domainName.replace(/\s+/g, '_')}_评估报告_${safeTime}.xlsx`; link.setAttribute("download", filename); link.style.visibility = 'hidden'; document.body.appendChild(link); link.click(); document.body.removeChild(link); URL.revokeObjectURL(url);
+            } catch (error) { console.error("生成Excel报告时出错:", error); alert("生成Excel报告失败，请查看控制台了解详情。"); }
+        }
+
+    </script>
+
+</body>
+</html>
+
+    </script>
+
+</body>
+</html>
